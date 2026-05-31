@@ -5,7 +5,6 @@ import RouletteView from './components/RouletteView.vue'
 import DishManage from './components/DishManage.vue'
 import IngredientManage from './components/IngredientManage.vue'
 import OrderHistory from './components/OrderHistory.vue'
-import DocsView from './components/DocsView.vue'
 
 const tabs = [
   { key: 'order', label: '点餐', icon: '🍽️' },
@@ -13,7 +12,6 @@ const tabs = [
   { key: 'dishes', label: '菜品管理', icon: '📋' },
   { key: 'ingredients', label: '原材料 / 库存', icon: '📦' },
   { key: 'orders', label: '订单记录', icon: '🧾' },
-  { key: 'docs', label: '项目文档', icon: '📚' },
 ]
 const active = ref('order')
 
@@ -53,7 +51,6 @@ provide('setTab', (key) => { active.value = key })
       <DishManage v-else-if="active === 'dishes'" />
       <IngredientManage v-else-if="active === 'ingredients'" />
       <OrderHistory v-else-if="active === 'orders'" />
-      <DocsView v-else-if="active === 'docs'" />
     </main>
 
     <transition name="fade">
