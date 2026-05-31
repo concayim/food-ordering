@@ -11,6 +11,8 @@ services:
       AI_API_KEY: ${AI_API_KEY:-}
       AI_BASE_URL: ${AI_BASE_URL:-}
       AI_MODEL: ${AI_MODEL:-}
+      PRINTER_DRIVER: ${PRINTER_DRIVER:-stub}
+      SHOP_NAME: ${SHOP_NAME:-小馆点餐}
     volumes:
       - food-data:/app/data
     restart: unless-stopped

@@ -32,6 +32,12 @@ export const api = {
   listOrders: () => request('/orders'),
   createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }),
   updateOrderStatus: (id, status) => request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  getOrderReceipt: (id) => request(`/orders/${id}/receipt`),
+  printOrder: (id) => request(`/orders/${id}/print`, { method: 'POST' }),
+
+  // 打印机
+  printerStatus: () => request('/printer/status'),
+  printerTest: () => request('/printer/test', { method: 'POST' }),
 
   // 图片上传（拍照/选图）
   uploadImage: async (blob, filename = 'photo.png') => {

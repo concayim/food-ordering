@@ -8,6 +8,11 @@
 - 移除前端「项目文档」页签；需求、更新日志与接口说明仅保留在仓库文档中
 - 更新 Cursor 规则：接口文档维护在 README，不再引用已删除的前端 api-docs 模块
 
+### 新增
+- 打印机接口：`PrinterDriver` 可扩展驱动，默认 stub 模拟打印
+- REST：`GET /api/printer/status`、`POST /api/printer/test`、`GET /api/orders/:id/receipt`、`POST /api/orders/:id/print`
+- 订单记录页「打印」按钮；驱动说明见 `docs/PRINTER.md`
+
 ## [0.4.0] - 2026-05-31
 
 ### 新增
