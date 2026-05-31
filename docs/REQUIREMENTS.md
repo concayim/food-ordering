@@ -57,6 +57,12 @@
 - 提供订单打印、小票预览、驱动状态查询、测试打印 API
 - 订单记录页提供「打印」入口
 
+### 2.8 订单推送（FR-08）
+
+- 支持飞书群机器人、企业微信群机器人、个人微信（PushPlus）
+- 新订单创建后异步自动推送；支持手动补推与测试接口
+- 通过环境变量配置 Webhook / Token，密钥不入库
+
 ## 3. 非功能需求
 
 | 编号 | 要求 |
@@ -86,6 +92,11 @@
 | `AI_API_KEY` | AI 功能时必填 | 大模型 API Key |
 | `AI_BASE_URL` | 否 | 默认 `https://api.openai.com/v1` |
 | `AI_MODEL` | 否 | 默认 `gpt-4o-mini` |
+| `PRINTER_DRIVER` | 否 | 默认 `stub`，见 `docs/PRINTER.md` |
+| `SHOP_NAME` | 否 | 小票抬头，默认「小馆点餐」 |
+| `FEISHU_WEBHOOK_URL` | 否 | 飞书群机器人 Webhook |
+| `WECOM_WEBHOOK_URL` | 否 | 企业微信群机器人 Webhook |
+| `PUSHPLUS_TOKEN` | 否 | PushPlus token，推送到个人微信 |
 
 参考 `backend/.env.example` 配置本地环境。
 
@@ -96,4 +107,4 @@
 | v0.1 | 点餐、上下架、原材料库存、订单 |
 | v0.2 | 随机轮盘、汤品、拍照、AI 烹饪、手动关联原材料 |
 | v0.3 | 去价格、详情弹窗、网址抓取烹饪 |
-| 后续 | 指定来源网站专用解析、用户权限、打印小票等（待规划） |
+| 后续 | 指定来源网站专用解析、ESC/POS 实体打印机驱动、用户权限等 |

@@ -40,6 +40,15 @@ async function printOrder(o) {
   }
 }
 
+async function pushOrder(o) {
+  try {
+    const res = await api.notifyOrder(o.id)
+    toast(res.message || '已推送')
+  } catch (e) {
+    toast(e.message, 'error')
+  }
+}
+
 function fmt(t) {
   return new Date(t).toLocaleString('zh-CN')
 }
@@ -68,6 +77,7 @@ function fmt(t) {
       <div class="o-foot">
         <span class="total">共 {{ o.items.reduce((s, it) => s + it.quantity, 0) }} 件</span>
         <div class="ops">
+          <button class="btn-ghost btn-sm" @click="pushOrder(o)">📣 推送</button>
           <button class="btn-ghost btn-sm" @click="printOrder(o)">🖨️ 打印</button>
           <button v-if="o.status === 'pending'" class="btn-primary btn-sm" @click="setStatus(o, 'paid')">标记已支付</button>
           <button v-if="o.status === 'paid'" class="btn-ghost btn-sm" @click="setStatus(o, 'done')">完成</button>

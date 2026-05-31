@@ -290,6 +290,7 @@ func createOrder(c *gin.Context) {
 		fail(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	notifyOrderAsync(created.ID)
 	c.JSON(http.StatusOK, created)
 }
 

@@ -17,6 +17,7 @@ func main() {
 
 	initDB()
 	initPrinter()
+	initNotifier()
 
 	r := gin.Default()
 	r.Use(cors.Default())
@@ -43,9 +44,13 @@ func main() {
 		api.PATCH("/orders/:id/status", updateOrderStatus)
 		api.GET("/orders/:id/receipt", getOrderReceipt)
 		api.POST("/orders/:id/print", printOrder)
+		api.POST("/orders/:id/notify", notifyOrderByID)
 
 		api.GET("/printer/status", getPrinterStatus)
 		api.POST("/printer/test", testPrint)
+
+		api.GET("/notify/status", getNotifyStatus)
+		api.POST("/notify/test", testNotify)
 
 		api.POST("/upload", uploadImage)
 		api.POST("/ai/cooking-method", aiCookingMethod)

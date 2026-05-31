@@ -108,6 +108,7 @@ docker run -d --name food-ordering \
 | [CHANGELOG.md](./CHANGELOG.md) | 版本更新日志 |
 | [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md) | 需求文档 |
 | [docs/PRINTER.md](./docs/PRINTER.md) | 打印机驱动接口说明 |
+| [docs/NOTIFY.md](./docs/NOTIFY.md) | 订单推送（飞书 / 微信） |
 | [README.md](./README.md) | 运行说明与接口列表 |
 
 ## 开发与发布约定
@@ -133,8 +134,11 @@ docker run -d --name food-ordering \
 | POST | `/api/orders/:id/print` | 打印订单小票 |
 | GET | `/api/printer/status` | 打印机驱动状态 |
 | POST | `/api/printer/test` | 测试打印 |
+| GET | `/api/notify/status` | 推送渠道状态 |
+| POST | `/api/notify/test` | 测试推送 |
+| POST | `/api/orders/:id/notify` | 手动推送订单 |
 | POST | `/api/upload` | 上传图片（multipart，字段名 `file`），返回 `{url}` |
 | POST | `/api/ai/cooking-method` | AI 生成烹饪方法（需配置 `AI_API_KEY`） |
 | POST | `/api/ai/cooking-method-from-url` | 从来源网站抓取并提炼烹饪方法 |
 
-> 库存约定：`stock = -1` 表示无限库存。打印机扩展见 [docs/PRINTER.md](./docs/PRINTER.md)。
+> 库存约定：`stock = -1` 表示无限库存。打印机见 [docs/PRINTER.md](./docs/PRINTER.md)，订单推送见 [docs/NOTIFY.md](./docs/NOTIFY.md)。

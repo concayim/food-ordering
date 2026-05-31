@@ -39,6 +39,11 @@ export const api = {
   printerStatus: () => request('/printer/status'),
   printerTest: () => request('/printer/test', { method: 'POST' }),
 
+  // 订单推送（飞书 / 企业微信 / 个人微信 PushPlus）
+  notifyStatus: () => request('/notify/status'),
+  notifyTest: () => request('/notify/test', { method: 'POST' }),
+  notifyOrder: (id) => request(`/orders/${id}/notify`, { method: 'POST' }),
+
   // 图片上传（拍照/选图）
   uploadImage: async (blob, filename = 'photo.png') => {
     const fd = new FormData()

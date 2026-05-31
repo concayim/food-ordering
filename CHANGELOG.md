@@ -12,6 +12,8 @@
 - 打印机接口：`PrinterDriver` 可扩展驱动，默认 stub 模拟打印
 - REST：`GET /api/printer/status`、`POST /api/printer/test`、`GET /api/orders/:id/receipt`、`POST /api/orders/:id/print`
 - 订单记录页「打印」按钮；驱动说明见 `docs/PRINTER.md`
+- 订单推送：飞书 Webhook、企业微信群机器人、个人微信（PushPlus）
+- 新订单自动推送；`GET /api/notify/status`、`POST /api/notify/test`、`POST /api/orders/:id/notify`；说明见 `docs/NOTIFY.md`
 
 ## [0.4.0] - 2026-05-31
 
