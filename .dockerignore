@@ -1,0 +1,21 @@
+.git
+.gitignore
+**/.DS_Store
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+
+# 本地数据
+backend/food.db
+backend/uploads/
+**/node_modules/
+frontend/dist/
+
+# 构建产物
+backend/backend
+backend/server
+
+# IDE
+.idea/
+**/.vscode/

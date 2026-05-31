@@ -2,6 +2,19 @@
 
 本项目的所有重要变更均记录于此，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)。
 
+## [Unreleased]
+
+（暂无）
+
+## [0.4.0] - 2026-05-31
+
+### 新增
+- Docker 多阶段构建：`Dockerfile` + `docker-compose.yml`，单容器部署前后端
+- 生产模式由 Go 托管前端静态资源（`./static`），SPA 路由回退
+- 数据目录可通过 `DATA_DIR` 环境变量配置（Docker 默认 `/app/data`）
+
+---
+
 ## [0.3.0] - 2026-05-31
 
 ### 新增

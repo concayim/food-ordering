@@ -11,8 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const uploadDir = "uploads"
-
 // uploadImage 接收 multipart 文件（拍照/选图），保存到本地并返回可访问的 URL
 func uploadImage(c *gin.Context) {
 	file, err := c.FormFile("file")
@@ -21,7 +19,8 @@ func uploadImage(c *gin.Context) {
 		return
 	}
 
-	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
+	dir := uploadDirPath()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		fail(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -31,7 +30,7 @@ func uploadImage(c *gin.Context) {
 		ext = ".png"
 	}
 	name := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
-	dst := filepath.Join(uploadDir, name)
+	dst := filepath.Join(dir, name)
 
 	if err := c.SaveUploadedFile(file, dst); err != nil {
 		fail(c, http.StatusInternalServerError, err.Error())

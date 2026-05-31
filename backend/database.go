@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -11,7 +12,10 @@ var db *gorm.DB
 
 func initDB() {
 	var err error
-	db, err = gorm.Open(sqlite.Open("food.db"), &gorm.Config{})
+	if err := os.MkdirAll(dataDir(), 0o755); err != nil {
+		log.Fatalf("创建数据目录失败: %v", err)
+	}
+	db, err = gorm.Open(sqlite.Open(dbPath()), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("连接数据库失败: %v", err)
 	}

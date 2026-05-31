@@ -1,0 +1,25 @@
+---
+description: 每次代码变更必须更新 CHANGELOG 并推送到 GitHub
+alwaysApply: true
+---
+
+# 变更记录与发布流程
+
+在本仓库（food-ordering）中完成任何功能、修复或配置改动后，必须执行：
+
+1. **更新 `CHANGELOG.md`**
+   - 在 `[Unreleased]` 或对应版本节下追加条目
+   - 分类使用：`新增` / `变更` / `修复` / `移除`
+   - 写清楚用户可感知的改动，而非仅列文件名
+
+2. **同步文档**（若相关）
+   - 接口变更 → `frontend/src/api-docs.js` 与 README
+   - 部署变更 → README Docker 章节
+
+3. **提交并推送 GitHub**
+   - 不要提交 `.env`、API Key、`food.db`、`uploads/`
+   - commit message 简述「为什么」
+   - 推送到 `origin/main`：`git@github.com:concayim/food-ordering.git`
+   - SSH 密钥：`~/.ssh/id_ed25519_concayim`
+
+未完成 CHANGELOG 更新或未 push 前，不算任务完成。

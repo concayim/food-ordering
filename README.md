@@ -60,13 +60,61 @@ npm run dev
 
 浏览器打开 http://localhost:5173 （前端已配置 `/api` 代理到后端 8080）。
 
+## Docker 部署
+
+单容器打包前后端，访问 **http://localhost:8080** 即可（API + 前端同一端口）。
+
+### 快速启动
+
+```bash
+# 1. 配置 AI（可选）
+cp backend/.env.example .env
+# 编辑 .env 填入 AI_API_KEY 等
+
+# 2. 构建并启动
+docker compose up -d --build
+
+# 查看日志
+docker compose logs -f app
+```
+
+### 仅构建镜像
+
+```bash
+docker build -t food-ordering:latest .
+docker run -d --name food-ordering \
+  -p 8080:8080 \
+  -v food-data:/app/data \
+  -e AI_API_KEY=your_key \
+  -e AI_BASE_URL=http://host.docker.internal:8317/v1 \
+  -e AI_MODEL=gpt-5.5 \
+  food-ordering:latest
+```
+
+### 说明
+
+| 项 | 说明 |
+| --- | --- |
+| 数据持久化 | 卷 `food-data` 挂载到 `/app/data`（含 SQLite `food.db` 与 `uploads/`） |
+| 环境变量 | `DATA_DIR`、`PORT`、`AI_API_KEY`、`AI_BASE_URL`、`AI_MODEL` |
+| AI 本地服务 | 容器内访问宿主机 API 请用 `http://host.docker.internal:8317/v1`（Mac/Windows Docker Desktop） |
+| 健康检查 | `GET /api/dishes` |
+
+停止服务：`docker compose down`（数据卷保留；加 `-v` 可删除卷）
+
 ## 文档
 
 | 文件 | 说明 |
 | --- | --- |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本更新日志 |
 | [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md) | 需求文档 |
-| 系统内「项目文档」页 | 需求 /  changelog / 接口可视化与在线调试 |
+| 系统内「项目文档」页 | 需求 / changelog / 接口可视化与在线调试 |
+
+## 开发与发布约定
+
+- **每次代码变更**须更新 [CHANGELOG.md](./CHANGELOG.md)（`[Unreleased]` 或新版本节）
+- 完成后 **commit 并 push** 到 [github.com/concayim/food-ordering](https://github.com/concayim/food-ordering)
+- 切勿提交 `.env`、API Key、本地 `food.db` 与 `uploads/`
 
 ## 主要接口
 
