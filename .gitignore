@@ -1,0 +1,21 @@
+# 依赖与构建产物
+frontend/node_modules/
+frontend/dist/
+backend/backend
+backend/*.exe
+
+# 本地数据与上传
+backend/food.db
+backend/uploads/
+*.db
+
+# 环境与密钥（切勿提交）
+.env
+.env.*
+!.env.example
+backend/.env
+
+# 系统与 IDE
+.DS_Store
+.idea/
+*.log
