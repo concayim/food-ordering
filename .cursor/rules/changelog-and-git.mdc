@@ -13,7 +13,7 @@ alwaysApply: true
    - 写清楚用户可感知的改动，而非仅列文件名
 
 2. **同步文档**（若相关）
-   - 接口变更 → `frontend/src/api-docs.js` 与 README
+   - 接口变更 → `README.md` 接口列表
    - 部署变更 → README Docker 章节
 
 3. **提交并推送 GitHub**
