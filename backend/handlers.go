@@ -2,8 +2,11 @@ package main
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -83,6 +86,131 @@ func deleteIngredient(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	db.Delete(&Ingredient{}, id)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// ---------------- 财务 Finance ----------------
+
+type purchaseInput struct {
+	IngredientID uint    `json:"ingredientId"`
+	Quantity     float64 `json:"quantity"`
+	UnitPrice    float64 `json:"unitPrice"`
+	TotalCost    float64 `json:"totalCost"`
+	PurchaseDate string  `json:"purchaseDate"`
+	Note         string  `json:"note"`
+}
+
+type dailySpend struct {
+	Date          string  `json:"date"`
+	TotalCost     float64 `json:"totalCost"`
+	PurchaseCount int64   `json:"purchaseCount"`
+}
+
+func normalizePurchaseDate(date string) (string, error) {
+	date = strings.TrimSpace(date)
+	if date == "" {
+		return time.Now().Format("2006-01-02"), nil
+	}
+	if _, err := time.Parse("2006-01-02", date); err != nil {
+		return "", errors.New("采购日期格式应为 YYYY-MM-DD")
+	}
+	return date, nil
+}
+
+func listPurchases(c *gin.Context) {
+	purchases := []IngredientPurchase{}
+	q := db.Preload("Ingredient").Order("purchase_date desc, id desc")
+	if start := strings.TrimSpace(c.Query("start")); start != "" {
+		q = q.Where("purchase_date >= ?", start)
+	}
+	if end := strings.TrimSpace(c.Query("end")); end != "" {
+		q = q.Where("purchase_date <= ?", end)
+	}
+	q.Find(&purchases)
+	c.JSON(http.StatusOK, purchases)
+}
+
+func createPurchase(c *gin.Context) {
+	var in purchaseInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		fail(c, http.StatusBadRequest, "参数错误: "+err.Error())
+		return
+	}
+	if in.IngredientID == 0 {
+		fail(c, http.StatusBadRequest, "请选择原材料")
+		return
+	}
+	if in.Quantity <= 0 {
+		fail(c, http.StatusBadRequest, "采购数量必须大于 0")
+		return
+	}
+	purchaseDate, err := normalizePurchaseDate(in.PurchaseDate)
+	if err != nil {
+		fail(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	totalCost := in.TotalCost
+	unitPrice := in.UnitPrice
+	if totalCost <= 0 && unitPrice > 0 {
+		totalCost = unitPrice * in.Quantity
+	}
+	if unitPrice <= 0 && totalCost > 0 {
+		unitPrice = totalCost / in.Quantity
+	}
+	if totalCost <= 0 {
+		fail(c, http.StatusBadRequest, "采购金额必须大于 0")
+		return
+	}
+
+	var created IngredientPurchase
+	err = db.Transaction(func(tx *gorm.DB) error {
+		var ing Ingredient
+		if err := tx.First(&ing, in.IngredientID).Error; err != nil {
+			return errors.New("原材料不存在")
+		}
+		purchase := IngredientPurchase{
+			IngredientID: in.IngredientID,
+			Quantity:     in.Quantity,
+			UnitPrice:    math.Round(unitPrice*100) / 100,
+			TotalCost:    math.Round(totalCost*100) / 100,
+			PurchaseDate: purchaseDate,
+			Note:         strings.TrimSpace(in.Note),
+		}
+		if err := tx.Create(&purchase).Error; err != nil {
+			return err
+		}
+		if !ing.IsInfinite() {
+			ing.Stock += int(math.Round(in.Quantity))
+			if err := tx.Save(&ing).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Preload("Ingredient").First(&purchase, purchase.ID).Error; err != nil {
+			return err
+		}
+		created = purchase
+		return nil
+	})
+	if err != nil {
+		fail(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, created)
+}
+
+func dailyPurchaseSpend(c *gin.Context) {
+	rows := []dailySpend{}
+	q := db.Model(&IngredientPurchase{}).
+		Select("purchase_date as date, sum(total_cost) as total_cost, count(*) as purchase_count").
+		Group("purchase_date").
+		Order("purchase_date desc")
+	if start := strings.TrimSpace(c.Query("start")); start != "" {
+		q = q.Where("purchase_date >= ?", start)
+	}
+	if end := strings.TrimSpace(c.Query("end")); end != "" {
+		q = q.Where("purchase_date <= ?", end)
+	}
+	q.Scan(&rows)
+	c.JSON(http.StatusOK, rows)
 }
 
 // ---------------- 菜品 Dish ----------------

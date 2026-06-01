@@ -32,6 +32,10 @@ func main() {
 		api.PATCH("/ingredients/:id/stock", setIngredientStock)
 		api.DELETE("/ingredients/:id", deleteIngredient)
 
+		api.GET("/finance/purchases", listPurchases)
+		api.POST("/finance/purchases", createPurchase)
+		api.GET("/finance/daily-spend", dailyPurchaseSpend)
+
 		api.GET("/dishes", listDishes)
 		api.GET("/dishes/:id", getDish)
 		api.POST("/dishes", createDish)

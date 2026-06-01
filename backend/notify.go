@@ -133,7 +133,7 @@ func notifyTestMessage() error {
 		}
 	}
 	if len(errs) > 0 {
-		return fmt.Errorf(strings.Join(errs, "; "))
+		return fmt.Errorf("%s", strings.Join(errs, "; "))
 	}
 	return nil
 }
@@ -162,8 +162,8 @@ func postJSON(url string, payload any) error {
 
 type feishuChannel struct{ url string }
 
-func (c *feishuChannel) Name() string    { return "feishu" }
-func (c *feishuChannel) Enabled() bool   { return c.url != "" }
+func (c *feishuChannel) Name() string  { return "feishu" }
+func (c *feishuChannel) Enabled() bool { return c.url != "" }
 func (c *feishuChannel) Send(title, content string) error {
 	text := title + "\n\n" + content
 	return postJSON(c.url, map[string]any{
@@ -176,8 +176,8 @@ func (c *feishuChannel) Send(title, content string) error {
 
 type wecomChannel struct{ url string }
 
-func (c *wecomChannel) Name() string    { return "wecom" }
-func (c *wecomChannel) Enabled() bool   { return c.url != "" }
+func (c *wecomChannel) Name() string  { return "wecom" }
+func (c *wecomChannel) Enabled() bool { return c.url != "" }
 func (c *wecomChannel) Send(title, content string) error {
 	text := title + "\n\n" + content
 	return postJSON(c.url, map[string]any{

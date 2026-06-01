@@ -13,8 +13,8 @@ const StockInfinite = -1
 type Ingredient struct {
 	ID        uint           `gorm:"primaryKey" json:"id"`
 	Name      string         `gorm:"size:100;not null;uniqueIndex" json:"name"`
-	Unit      string         `gorm:"size:20" json:"unit"`  // 单位，如 克/个/份
-	Stock     int            `json:"stock"`                 // 库存数量，-1 表示无限
+	Unit      string         `gorm:"size:20" json:"unit"` // 单位，如 克/个/份
+	Stock     int            `json:"stock"`               // 库存数量，-1 表示无限
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
@@ -23,6 +23,20 @@ type Ingredient struct {
 // IsInfinite 是否为无限库存
 func (i Ingredient) IsInfinite() bool {
 	return i.Stock == StockInfinite
+}
+
+// IngredientPurchase 原材料采购流水，用于财务统计
+type IngredientPurchase struct {
+	ID           uint        `gorm:"primaryKey" json:"id"`
+	IngredientID uint        `gorm:"index" json:"ingredientId"`
+	Ingredient   *Ingredient `gorm:"foreignKey:IngredientID" json:"ingredient,omitempty"`
+	Quantity     float64     `json:"quantity"`                          // 本次采购数量
+	UnitPrice    float64     `json:"unitPrice"`                         // 单价
+	TotalCost    float64     `gorm:"index" json:"totalCost"`            // 本次采购总金额
+	PurchaseDate string      `gorm:"size:10;index" json:"purchaseDate"` // YYYY-MM-DD
+	Note         string      `gorm:"size:500" json:"note"`
+	CreatedAt    time.Time   `json:"createdAt"`
+	UpdatedAt    time.Time   `json:"updatedAt"`
 }
 
 // 菜品类型

@@ -5,12 +5,14 @@ import RouletteView from './components/RouletteView.vue'
 import DishManage from './components/DishManage.vue'
 import IngredientManage from './components/IngredientManage.vue'
 import OrderHistory from './components/OrderHistory.vue'
+import FinanceView from './components/FinanceView.vue'
 
 const tabs = [
   { key: 'order', label: '点餐', icon: '🍽️' },
   { key: 'roulette', label: '随机轮盘', icon: '🎡' },
   { key: 'dishes', label: '菜品管理', icon: '📋' },
   { key: 'ingredients', label: '原材料 / 库存', icon: '📦' },
+  { key: 'finance', label: '财务统计', icon: '💰' },
   { key: 'orders', label: '订单记录', icon: '🧾' },
 ]
 const active = ref('order')
@@ -50,6 +52,7 @@ provide('setTab', (key) => { active.value = key })
       <RouletteView v-else-if="active === 'roulette'" />
       <DishManage v-else-if="active === 'dishes'" />
       <IngredientManage v-else-if="active === 'ingredients'" />
+      <FinanceView v-else-if="active === 'finance'" />
       <OrderHistory v-else-if="active === 'orders'" />
     </main>
 
@@ -72,7 +75,7 @@ provide('setTab', (key) => { active.value = key })
   z-index: 10;
 }
 .brand { font-size: 20px; font-weight: 700; padding: 16px 0; white-space: nowrap; }
-.tabs { display: flex; gap: 6px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .tab {
   background: transparent;
   color: var(--muted);

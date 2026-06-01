@@ -12,6 +12,7 @@
   - **原材料手动关联**：从已有原材料中选择，或直接**手动新建原材料**并关联（用量自填）
   - **烹饪方法**（上架前可填写）：可自己录入；不懂做法时可点「✨ AI 推荐」由大模型生成，或粘贴**来源网站菜谱网址**点「🌐 从网址获取」自动抓取并提炼（见下方 AI 配置）
 - **原材料 / 库存**：管理原材料，库存可设为具体数量或 **无限（∞）**；无限库存下单时不扣减
+- **财务统计**：记录原材料采购流水（数量、单价、总金额、日期），有限库存自动补入采购数量，并按天汇总原材料支出
 - **订单记录**：查看历史订单，更新订单状态（待处理 / 已支付 / 完成 / 取消）
 
 ## 技术栈
@@ -128,6 +129,8 @@ docker run -d --name food-ordering \
 | DELETE | `/api/dishes/:id` | 删除菜品 |
 | GET/POST | `/api/ingredients` | 原材料列表 / 新增 |
 | PATCH | `/api/ingredients/:id/stock` | 设置库存（`{"infinite":true}` 设为无限） |
+| GET/POST | `/api/finance/purchases` | 采购流水列表 / 新增采购入账 |
+| GET | `/api/finance/daily-spend` | 每日原材料采购支出汇总 |
 | GET/POST | `/api/orders` | 订单列表 / 下单 |
 | PATCH | `/api/orders/:id/status` | 更新订单状态 |
 | GET | `/api/orders/:id/receipt` | 预览订单小票 |

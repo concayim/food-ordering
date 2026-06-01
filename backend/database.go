@@ -20,7 +20,7 @@ func initDB() {
 		log.Fatalf("连接数据库失败: %v", err)
 	}
 
-	if err := db.AutoMigrate(&Ingredient{}, &Dish{}, &DishIngredient{}, &Order{}, &OrderItem{}); err != nil {
+	if err := db.AutoMigrate(&Ingredient{}, &IngredientPurchase{}, &Dish{}, &DishIngredient{}, &Order{}, &OrderItem{}); err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}
 

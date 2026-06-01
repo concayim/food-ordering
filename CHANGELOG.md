@@ -9,6 +9,7 @@
 - 更新 Cursor 规则：接口文档维护在 README，不再引用已删除的前端 api-docs 模块
 
 ### 新增
+- 财务统计：新增原材料采购流水、每日采购支出汇总接口与前端「财务统计」页
 - 打印机接口：`PrinterDriver` 可扩展驱动，默认 stub 模拟打印
 - REST：`GET /api/printer/status`、`POST /api/printer/test`、`GET /api/orders/:id/receipt`、`POST /api/orders/:id/print`
 - 订单记录页「打印」按钮；驱动说明见 `docs/PRINTER.md`

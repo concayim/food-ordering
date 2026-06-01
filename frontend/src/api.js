@@ -28,6 +28,17 @@ export const api = {
   setStock: (id, payload) => request(`/ingredients/${id}/stock`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteIngredient: (id) => request(`/ingredients/${id}`, { method: 'DELETE' }),
 
+  // 财务 / 原材料采购
+  listPurchases: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/finance/purchases${qs ? `?${qs}` : ''}`)
+  },
+  createPurchase: (purchase) => request('/finance/purchases', { method: 'POST', body: JSON.stringify(purchase) }),
+  dailySpend: (params = {}) => {
+    const qs = new URLSearchParams(params).toString()
+    return request(`/finance/daily-spend${qs ? `?${qs}` : ''}`)
+  },
+
   // 订单
   listOrders: () => request('/orders'),
   createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }),
