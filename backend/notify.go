@@ -128,6 +128,9 @@ func notifyTestMessage() error {
 	content := "这是一条测试消息，说明订单推送渠道配置正常。"
 	var errs []string
 	for _, ch := range notifyChannels {
+		if !ch.Enabled() {
+			continue
+		}
 		if err := ch.Send(title, content); err != nil {
 			errs = append(errs, ch.Name()+": "+err.Error())
 		}

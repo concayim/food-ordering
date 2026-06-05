@@ -175,4 +175,8 @@ h2 { margin: 0 0 16px; font-size: 18px; }
 .cooking { white-space: pre-wrap; word-break: break-word; background: #fafafa; border-radius: 10px; padding: 14px; font-family: inherit; font-size: 14px; line-height: 1.7; margin: 0; }
 .muted { color: var(--muted); }
 .d-ops { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+@media (max-width: 760px) {
+  .order-layout { grid-template-columns: 1fr; }
+  .cart { position: static; }
+}
 </style>

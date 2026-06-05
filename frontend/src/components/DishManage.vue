@@ -427,4 +427,9 @@ h2 { margin: 0; font-size: 18px; }
 
 .camera { width: 520px; }
 .cam-video { width: 100%; border-radius: 12px; background: #000; }
+@media (max-width: 760px) {
+  .tr { grid-template-columns: 1fr 1fr; }
+  .c-act { grid-column: 1 / -1; }
+  .c-ing, .c-cat, .c-state { display: none; }
+}
 </style>

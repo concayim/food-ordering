@@ -12,6 +12,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// validOrderStatuses 订单允许的状态枚举
+var validOrderStatuses = map[string]bool{
+	"pending": true, "paid": true, "done": true, "cancelled": true,
+}
+
 func fail(c *gin.Context, code int, msg string) {
 	c.JSON(code, gin.H{"error": msg})
 }
@@ -82,9 +87,15 @@ func setIngredientStock(c *gin.Context) {
 	c.JSON(http.StatusOK, ing)
 }
 
+ 
 func deleteIngredient(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	db.Delete(&Ingredient{}, id)
+	var ing Ingredient
+	if err := db.First(&ing, id).Error; err != nil {
+		fail(c, http.StatusNotFound, "原材料不存在")
+		return
+	}
+	db.Delete(&ing)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -152,9 +163,11 @@ func createPurchase(c *gin.Context) {
 	unitPrice := in.UnitPrice
 	if totalCost <= 0 && unitPrice > 0 {
 		totalCost = unitPrice * in.Quantity
-	}
-	if unitPrice <= 0 && totalCost > 0 {
+	} else if unitPrice <= 0 && totalCost > 0 {
 		unitPrice = totalCost / in.Quantity
+	} else if totalCost > 0 && unitPrice > 0 {
+		// 同时提供了总金额和单价时，以总金额为准反算单价，确保数据一致
+		unitPrice = math.Round(totalCost/in.Quantity*100) / 100
 	}
 	if totalCost <= 0 {
 		fail(c, http.StatusBadRequest, "采购金额必须大于 0")
@@ -339,7 +352,12 @@ func toggleShelf(c *gin.Context) {
 
 func deleteDish(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
-	db.Select("Ingredients").Delete(&Dish{ID: uint(id)})
+	var dish Dish
+	if err := db.First(&dish, id).Error; err != nil {
+		fail(c, http.StatusNotFound, "菜品不存在")
+		return
+	}
+	db.Select("Ingredients").Delete(&dish)
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -389,6 +407,9 @@ func createOrder(c *gin.Context) {
 				DishID: dish.ID, DishName: dish.Name, Quantity: item.Quantity,
 			})
 		}
+		if len(order.Items) == 0 {
+			return errors.New("订单中所有菜品数量必须大于 0")
+		}
 
 		// 校验并扣减库存（无限库存跳过）
 		for ingID, qty := range needed {
@@ -437,12 +458,53 @@ func updateOrderStatus(c *gin.Context) {
 		fail(c, http.StatusBadRequest, "参数错误")
 		return
 	}
+	if !validOrderStatuses[body.Status] {
+		fail(c, http.StatusBadRequest, "无效的状态值")
+		return
+	}
 	var order Order
-	if err := db.First(&order, id).Error; err != nil {
+	if err := db.Preload("Items").First(&order, id).Error; err != nil {
 		fail(c, http.StatusNotFound, "订单不存在")
 		return
 	}
-	order.Status = body.Status
-	db.Save(&order)
+	if body.Status == "cancelled" && order.Status != "cancelled" {
+		err := db.Transaction(func(tx *gorm.DB) error {
+			needed := map[uint]float64{}
+			for _, item := range order.Items {
+				var dish Dish
+				if err := tx.Preload("Ingredients").First(&dish, item.DishID).Error; err != nil {
+					continue
+				}
+				for _, di := range dish.Ingredients {
+					needed[di.IngredientID] += di.Quantity * float64(item.Quantity)
+				}
+			}
+			for ingID, qty := range needed {
+				var ing Ingredient
+				if err := tx.First(&ing, ingID).Error; err != nil {
+					continue
+				}
+				if ing.IsInfinite() {
+					continue
+				}
+				ing.Stock += int(qty)
+				if err := tx.Save(&ing).Error; err != nil {
+					return err
+				}
+			}
+			order.Status = body.Status
+			if err := tx.Save(&order).Error; err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			fail(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		order.Status = body.Status
+		db.Save(&order)
+	}
 	c.JSON(http.StatusOK, order)
 }

@@ -156,4 +156,8 @@ h2 { margin: 0; font-size: 18px; }
 .empty { color: var(--muted); text-align: center; padding: 30px 0; }
 .switch { display: flex; align-items: center; gap: 8px; width: auto; }
 .switch input { width: auto; }
+@media (max-width: 760px) {
+  .tr { grid-template-columns: 1fr 1fr; }
+  .c-act { grid-column: 1 / -1; }
+}
 </style>
