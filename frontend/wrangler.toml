@@ -1,0 +1,18 @@
+name = "food-ordering"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "food-ordering-db"
+database_id = "6fdb28f7-e1a0-45d9-8347-f60b606b2b3d"
+
+# R2 bucket for uploads — enable R2 in Cloudflare Dashboard first, then uncomment:
+# [[r2_buckets]]
+# binding = "UPLOADS"
+# bucket_name = "food-ordering-uploads"
+
+[vars]
+SHOP_NAME = "小馆点餐"
