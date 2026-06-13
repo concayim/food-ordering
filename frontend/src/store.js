@@ -1,6 +1,36 @@
 import { reactive } from 'vue'
 
-// 全局购物车，跨页签共享：{ dishId: quantity }
+// ========== Auth State ==========
+const auth = reactive({
+  token: localStorage.getItem('auth_token') || null,
+  user: JSON.parse(localStorage.getItem('auth_user') || 'null'),
+})
+
+export function setAuth(token, user) {
+  auth.token = token
+  auth.user = user
+  localStorage.setItem('auth_token', token || '')
+  localStorage.setItem('auth_user', JSON.stringify(user))
+}
+
+export function clearAuth() {
+  auth.token = null
+  auth.user = null
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('auth_user')
+}
+
+export function isLoggedIn() {
+  return !!auth.token
+}
+
+export function getAuthToken() {
+  return auth.token
+}
+
+export { auth }
+
+// ========== Shopping Cart (跨页签共享) ==========
 export const cart = reactive({})
 
 export function addToCart(dishId, n = 1) {

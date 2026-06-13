@@ -1,11 +1,16 @@
 <script setup>
-import { ref, provide } from 'vue'
+import { ref, provide, computed } from 'vue'
+import { isLoggedIn, clearAuth } from './store'
+import AuthView from './components/AuthView.vue'
 import OrderView from './components/OrderView.vue'
 import RouletteView from './components/RouletteView.vue'
 import DishManage from './components/DishManage.vue'
 import IngredientManage from './components/IngredientManage.vue'
 import OrderHistory from './components/OrderHistory.vue'
 import FinanceView from './components/FinanceView.vue'
+
+const active = ref('order')
+const loggedIn = computed(isLoggedIn)
 
 const tabs = [
   { key: 'order', label: '点餐', icon: '🍽️' },
@@ -15,9 +20,7 @@ const tabs = [
   { key: 'finance', label: '财务统计', icon: '💰' },
   { key: 'orders', label: '订单记录', icon: '🧾' },
 ]
-const active = ref('order')
 
-// 简单的全局提示
 const toast = ref(null)
 let timer = null
 function showToast(message, type = 'success') {
@@ -26,35 +29,44 @@ function showToast(message, type = 'success') {
   timer = setTimeout(() => (toast.value = null), 2500)
 }
 provide('toast', showToast)
-
-// 供子组件切换页签（如轮盘抽中后跳转到点餐页）
 provide('setTab', (key) => { active.value = key })
+
+function logout() {
+  clearAuth()
+  active.value = 'order'
+  showToast('已退出登录')
+}
 </script>
 
 <template>
   <div class="app">
-    <header class="topbar">
-      <div class="brand">🍜 小馆点餐系统</div>
-      <nav class="tabs">
-        <button
-          v-for="t in tabs"
-          :key="t.key"
-          :class="['tab', { active: active === t.key }]"
-          @click="active = t.key"
-        >
-          <span>{{ t.icon }}</span> {{ t.label }}
-        </button>
-      </nav>
-    </header>
+    <template v-if="loggedIn">
+      <header class="topbar">
+        <div class="brand">🍜 小馆点餐</div>
+        <nav class="tabs">
+          <button
+            v-for="t in tabs"
+            :key="t.key"
+            :class="['tab', { active: active === t.key }]"
+            @click="active = t.key"
+          >
+            <span>{{ t.icon }}</span> {{ t.label }}
+          </button>
+        </nav>
+        <button class="btn-ghost btn-sm logout-btn" @click="logout">退出</button>
+      </header>
 
-    <main class="content">
-      <OrderView v-if="active === 'order'" />
-      <RouletteView v-else-if="active === 'roulette'" />
-      <DishManage v-else-if="active === 'dishes'" />
-      <IngredientManage v-else-if="active === 'ingredients'" />
-      <FinanceView v-else-if="active === 'finance'" />
-      <OrderHistory v-else-if="active === 'orders'" />
-    </main>
+      <main class="content">
+        <OrderView v-if="active === 'order'" />
+        <RouletteView v-else-if="active === 'roulette'" />
+        <DishManage v-else-if="active === 'dishes'" />
+        <IngredientManage v-else-if="active === 'ingredients'" />
+        <FinanceView v-else-if="active === 'finance'" />
+        <OrderHistory v-else-if="active === 'orders'" />
+      </main>
+    </template>
+
+    <AuthView v-else />
 
     <transition name="fade">
       <div v-if="toast" :class="['toast', toast.type]">{{ toast.message }}</div>
@@ -75,7 +87,7 @@ provide('setTab', (key) => { active.value = key })
   z-index: 10;
 }
 .brand { font-size: 20px; font-weight: 700; padding: 16px 0; white-space: nowrap; }
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
 .tab {
   background: transparent;
   color: var(--muted);
@@ -85,6 +97,7 @@ provide('setTab', (key) => { active.value = key })
   font-size: 15px;
 }
 .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.logout-btn { flex-shrink: 0; }
 .content { max-width: 1100px; margin: 0 auto; padding: 24px; }
 
 .toast {

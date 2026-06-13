@@ -1,10 +1,13 @@
+import { getAuthToken } from './store'
+
 const BASE = '/api'
 
 async function request(url, options = {}) {
-  const res = await fetch(BASE + url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  })
+  const headers = { 'Content-Type': 'application/json' }
+  const token = getAuthToken()
+  if (token) headers['Authorization'] = 'Bearer ' + token
+
+  const res = await fetch(BASE + url, { headers, ...options })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
     throw new Error(data.error || `请求失败 (${res.status})`)
@@ -13,6 +16,11 @@ async function request(url, options = {}) {
 }
 
 export const api = {
+  // ========== 认证 ==========
+  login: (payload) => request('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  getMe: () => request('/auth/me'),
+
   // 菜品
   listDishes: (onShelfOnly = false) =>
     request(`/dishes${onShelfOnly ? '?onShelf=true' : ''}`),
@@ -28,7 +36,7 @@ export const api = {
   setStock: (id, payload) => request(`/ingredients/${id}/stock`, { method: 'PATCH', body: JSON.stringify(payload) }),
   deleteIngredient: (id) => request(`/ingredients/${id}`, { method: 'DELETE' }),
 
-  // 财务 / 原材料采购
+  // 财务
   listPurchases: (params = {}) => {
     const qs = new URLSearchParams(params).toString()
     return request(`/finance/purchases${qs ? `?${qs}` : ''}`)
@@ -50,25 +58,27 @@ export const api = {
   printerStatus: () => request('/printer/status'),
   printerTest: () => request('/printer/test', { method: 'POST' }),
 
-  // 订单推送（飞书 / 企业微信 / 个人微信 PushPlus）
+  // 订单推送
   notifyStatus: () => request('/notify/status'),
   notifyTest: () => request('/notify/test', { method: 'POST' }),
   notifyOrder: (id) => request(`/orders/${id}/notify`, { method: 'POST' }),
 
-  // 图片上传（拍照/选图）
+  // 图片上传
   uploadImage: async (blob, filename = 'photo.png') => {
     const fd = new FormData()
     fd.append('file', blob, filename)
-    const res = await fetch(BASE + '/upload', { method: 'POST', body: fd })
+    const headers = {}
+    const token = getAuthToken()
+    if (token) headers['Authorization'] = 'Bearer ' + token
+    const res = await fetch(BASE + '/upload', { method: 'POST', body: fd, headers })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.error || '上传失败')
-    return data // { url }
+    return data
   },
 
-  // AI 推荐烹饪方法
+  // AI
   aiCookingMethod: (payload) =>
     request('/ai/cooking-method', { method: 'POST', body: JSON.stringify(payload) }),
-  // 从来源网站获取烹饪方法
   aiCookingMethodFromURL: (payload) =>
     request('/ai/cooking-method-from-url', { method: 'POST', body: JSON.stringify(payload) }),
 }

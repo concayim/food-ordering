@@ -8,26 +8,33 @@ const toast = inject('toast')
 const dishes = menuDishes
 const remark = ref('')
 const submitting = ref(false)
-const detail = ref(null) // 当前查看详情的菜品
+const detail = ref(null)
+const activeCat = ref('')
+
+const categories = computed(() => {
+  const cats = new Set()
+  dishes.value.forEach(d => { if (d.category) cats.add(d.category) })
+  return [...cats].sort()
+})
+
+const filteredDishes = computed(() => {
+  if (!activeCat.value) return dishes.value
+  return dishes.value.filter(d => d.category === activeCat.value)
+})
+
+const catCount = (cat) => {
+  if (!cat) return dishes.value.length
+  return dishes.value.filter(d => d.category === cat).length
+}
 
 async function load() {
-  try {
-    await loadMenu()
-  } catch (e) {
-    toast(e.message, 'error')
-  }
+  try { await loadMenu() } catch (e) { toast(e.message, 'error') }
 }
 onMounted(load)
 
-function add(dish) {
-  addToCart(dish.id)
-}
-function dec(dish) {
-  decFromCart(dish.id)
-}
-function openDetail(dish) {
-  detail.value = dish
-}
+function add(dish) { addToCart(dish.id) }
+function dec(dish) { decFromCart(dish.id) }
+function openDetail(dish) { detail.value = dish }
 
 const cartList = computed(() =>
   Object.entries(cart).map(([id, qty]) => {
@@ -57,11 +64,23 @@ async function submit() {
 
 <template>
   <div class="order-layout">
+    <aside class="cat-bar card">
+      <div class="cat-title">📂 分类</div>
+      <button :class="['cat-btn', { active: activeCat === '' }]" @click="activeCat = ''">
+        全部 <span class="badge">{{ catCount('') }}</span>
+      </button>
+      <button v-for="cat in categories" :key="cat"
+        :class="['cat-btn', { active: activeCat === cat }]"
+        @click="activeCat = cat">
+        {{ cat }} <span class="badge">{{ catCount(cat) }}</span>
+      </button>
+    </aside>
+
     <div class="menu">
-      <h2>菜单</h2>
-      <div v-if="dishes.length === 0" class="empty">暂无上架菜品，请到「菜品管理」中上架。</div>
+      <h2>菜单 <span v-if="activeCat" class="cat-hint">· {{ activeCat }}</span></h2>
+      <div v-if="filteredDishes.length === 0" class="empty">暂无上架菜品，请到「菜品管理」中上架。</div>
       <div class="dish-grid">
-        <div v-for="d in dishes" :key="d.id" class="card dish-card" @click="openDetail(d)">
+        <div v-for="d in filteredDishes" :key="d.id" class="card dish-card" @click="openDetail(d)">
           <div class="thumb" :style="{ backgroundImage: `url(${d.imageUrl})` }">
             <span class="cat tag tag-orange" v-if="d.category">{{ d.category }}</span>
             <span class="kind tag" :class="d.kind === 'soup' ? 'tag-orange' : 'tag-gray'">{{ d.kind === 'soup' ? '汤品' : '菜品' }}</span>
@@ -102,7 +121,6 @@ async function submit() {
       </button>
     </aside>
 
-    <!-- 菜品详情 / 烹饪方式 -->
     <div v-if="detail" class="modal-mask" @click.self="detail = null">
       <div class="modal detail">
         <div class="d-thumb" :style="{ backgroundImage: `url(${detail.imageUrl})` }"></div>
@@ -112,7 +130,6 @@ async function submit() {
           <span v-if="detail.category" class="tag tag-gray">{{ detail.category }}</span>
         </div>
         <p class="d-desc" v-if="detail.description">{{ detail.description }}</p>
-
         <div class="d-section">
           <h3>原材料</h3>
           <div v-if="detail.ingredients?.length" class="d-ings">
@@ -122,13 +139,11 @@ async function submit() {
           </div>
           <p v-else class="muted">未配置原材料</p>
         </div>
-
         <div class="d-section">
           <h3>🍳 烹饪方式</h3>
           <pre v-if="detail.cookingMethod" class="cooking">{{ detail.cookingMethod }}</pre>
           <p v-else class="muted">该菜品还没有填写烹饪方式。</p>
         </div>
-
         <div class="d-ops">
           <button class="btn-ghost" @click="detail = null">关闭</button>
           <button class="btn-primary" @click="add(detail); detail = null">加入购物车</button>
@@ -139,8 +154,21 @@ async function submit() {
 </template>
 
 <style scoped>
-.order-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+.order-layout { display: grid; grid-template-columns: 160px 1fr 320px; gap: 20px; align-items: start; }
 h2 { margin: 0 0 16px; font-size: 18px; }
+.cat-hint { color: var(--muted); font-weight: 400; font-size: 14px; }
+.cat-bar { padding: 14px; position: sticky; top: 88px; }
+.cat-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--muted); }
+.cat-btn {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; padding: 8px 10px; margin-bottom: 4px;
+  background: transparent; color: var(--text); font-size: 13px;
+  border-radius: 8px; text-align: left;
+}
+.cat-btn:hover { background: #f0f1f3; }
+.cat-btn.active { background: var(--primary); color: #fff; }
+.cat-btn .badge { font-size: 11px; opacity: 0.7; }
+
 .dish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .dish-card { overflow: hidden; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; }
 .dish-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.1); }
@@ -175,8 +203,12 @@ h2 { margin: 0 0 16px; font-size: 18px; }
 .cooking { white-space: pre-wrap; word-break: break-word; background: #fafafa; border-radius: 10px; padding: 14px; font-family: inherit; font-size: 14px; line-height: 1.7; margin: 0; }
 .muted { color: var(--muted); }
 .d-ops { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
-@media (max-width: 760px) {
+
+@media (max-width: 960px) {
   .order-layout { grid-template-columns: 1fr; }
+  .cat-bar { position: static; display: flex; flex-wrap: wrap; gap: 6px; overflow-x: auto; padding: 12px; }
+  .cat-title { display: none; }
+  .cat-btn { width: auto; white-space: nowrap; margin-bottom: 0; }
   .cart { position: static; }
 }
 </style>

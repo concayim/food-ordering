@@ -37,6 +37,119 @@ function toCamel(o: any): any {
 }
 function camelJson(data: any, status = 200): Response { return json(toCamel(data), status); }
 
+// ========== Auth ==========
+
+function b64url(s) {
+  return btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+}
+
+async function hashPassword(pw, saltInput) {
+  var enc = new TextEncoder();
+  var saltBytes = saltInput || crypto.getRandomValues(new Uint8Array(16));
+  var km = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+  var buf = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: saltBytes, iterations: 100000, hash: 'SHA-256' }, km, 256);
+  var h = Array.from(new Uint8Array(buf));
+  var s = Array.from(saltBytes);
+  return { salt: btoa(String.fromCharCode.apply(null, s)), hash: btoa(String.fromCharCode.apply(null, h)) };
+}
+
+async function verifyPassword(pw, storedHash, storedSalt) {
+  var saltB = new Uint8Array(atob(storedSalt).split('').map(function(c) { return c.charCodeAt(0); }));
+  var r = await hashPassword(pw, saltB);
+  return r.hash === storedHash;
+}
+
+async function createJWT(payload, secret) {
+  var enc = new TextEncoder();
+  var hdr = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  var pld = b64url(JSON.stringify(Object.assign({}, payload, { iat: Math.floor(Date.now()/1000), exp: Math.floor(Date.now()/1000)+86400 })));
+  var key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  var sig = await crypto.subtle.sign('HMAC', key, enc.encode(hdr+'.'+pld));
+  return hdr+'.'+pld+'.'+b64url(String.fromCharCode.apply(null, new Uint8Array(sig)));
+}
+
+async function verifyJWT(token, secret) {
+  var parts = token.split('.');
+  if (parts.length !== 3) return null;
+  var hdr = parts[0], pld = parts[1], sig = parts[2];
+  var enc = new TextEncoder();
+  var key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
+  var sigB = Uint8Array.from(atob(sig.replace(/-/g,'+').replace(/_/g,'/')), function(c) { return c.charCodeAt(0); });
+  var ok = await crypto.subtle.verify('HMAC', key, sigB, enc.encode(hdr+'.'+pld));
+  if (!ok) return null;
+  try {
+    var d = JSON.parse(atob(pld.replace(/-/g,'+').replace(/_/g,'/')));
+    if (d.exp && d.exp*1000 < Date.now()) return null;
+    return d;
+  } catch(e) { return null; }
+}
+
+function getBearer(req) {
+  var a = req.headers.get('Authorization');
+  return (a && a.startsWith('Bearer ')) ? a.slice(7) : null;
+}
+
+var AUTH_SECRET = 'FOOD_AUTH_SECRET_' + Date.now();
+
+async function getAuthUser(req, env) {
+  var token = getBearer(req);
+  if (!token) return null;
+  var payload = await verifyJWT(token, AUTH_SECRET);
+  if (!payload) return null;
+  var u = await env.DB.prepare('SELECT id, username, role FROM users WHERE id = ?').bind(payload.userId).first();
+  return u || null;
+}
+
+async function checkAIQuota(env, userId) {
+  var t = new Date(Date.now() - 12*3600*1000).toISOString().replace('T', ' ').slice(0, 19);
+  var r = await env.DB.prepare("SELECT COUNT(*) as cnt FROM ai_usage_logs WHERE user_id=? AND created_at>=?").bind(userId, t).first();
+  return r.cnt < 5;
+}
+
+async function logAIUsage(env, userId, endpoint) {
+  await env.DB.prepare("INSERT INTO ai_usage_logs (user_id, endpoint) VALUES (?,?)").bind(userId, endpoint).run();
+}
+
+
+// ========== Auth Handlers ==========
+
+async function handleRegister(req, env) {
+  var b = await req.json();
+  var un = (b.username || '').trim(), pw = b.password || '';
+  if (!un) return fail(400, '请输入用户名');
+  if (!pw) return fail(400, '请输入密码');
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{}|;':"\\,.<>\/?\`~]).{8,}$/.test(pw)) return fail(400, '密码需要至少8位，包含大小写字母、数字和特殊字符');
+  if (await env.DB.prepare('SELECT 1 FROM users WHERE username = ?').bind(un).first()) return fail(409, '用户名已存在');
+  var cnt = await env.DB.prepare('SELECT COUNT(*) as c FROM users').first();
+  var role = cnt.c === 0 ? 'admin' : 'user';
+  var ph = await hashPassword(pw);
+  var u = await env.DB.prepare('INSERT INTO users (username, password_hash, salt, role) VALUES (?,?,?,?) RETURNING id, username, role').bind(un, ph.hash, ph.salt, role).first();
+  var t = await createJWT({ userId: u.id, username: u.username, role: u.role }, AUTH_SECRET);
+  return camelJson({ token: t, user: { id: u.id, username: u.username, role: u.role } });
+}
+
+async function handleLogin(req, env) {
+  var b = await req.json();
+  var un = (b.username || '').trim(), pw = b.password || '';
+  if (!un || !pw) return fail(400, '请输入用户名和密码');
+  var u = await env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(un).first();
+  if (!u || !(await verifyPassword(pw, u.password_hash, u.salt))) return fail(401, '用户名或密码错误');
+  var ip = req.headers.get('CF-Connecting-IP') || req.headers.get('X-Forwarded-For') || '';
+  await env.DB.prepare("INSERT INTO login_logs (user_id, ip) VALUES (?,?)").bind(u.id, ip).run();
+  var t = await createJWT({ userId: u.id, username: u.username, role: u.role }, AUTH_SECRET);
+  return camelJson({ token: t, user: { id: u.id, username: u.username, role: u.role } });
+}
+
+async function handleMe(req, env) {
+  var t = getBearer(req);
+  if (!t) return fail(401, '请先登录');
+  var p = await verifyJWT(t, AUTH_SECRET);
+  if (!p) return fail(401, '登录已过期，请重新登录');
+  var u = await env.DB.prepare('SELECT id, username, role FROM users WHERE id = ?').bind(p.userId).first();
+  if (!u) return fail(401, '用户不存在');
+  return camelJson(u);
+}
+
 function shopName(env: Env): string { return env.SHOP_NAME || '小馆点餐'; }
 
 function statusLabel(s: string): string {
@@ -296,13 +409,20 @@ async function uploadImage(req: Request, env: Env) {
 
 // ========== AI ==========
 async function aiCookingMethod(req: Request, env: Env) {
+  var au = await getAuthUser(req, env);
+  if (!au) return fail(401, '请先登录');
+  if (au.role !== 'admin' && !(await checkAIQuota(env, au.id))) return fail(429, 'AI 调用已达上限（每12小时5次），请稍后再试');
   const b = await req.json() as any;
   if (!b.name?.trim()) return fail(400, '请先填写名称');
   const kl = b.kind === 'soup' ? '汤品' : '菜品', it = b.ingredients?.length ? b.ingredients.join('、') : '（未提供原材料）';
   const r = await callAI(env, [{ role: 'system', content: '你是专业中餐厨师。' }, { role: 'user', content: '请为' + kl + '「' + b.name + '」给出烹饪方法。\n原材料：' + it + '。\n要求：分步骤，6步以内，只输出步骤。' }]);
+  await logAIUsage(env, au.id, 'cooking-method');
   return json({ cookingMethod: r });
 }
 async function aiCookingMethodFromURL(req: Request, env: Env) {
+  var au = await getAuthUser(req, env);
+  if (!au) return fail(401, '请先登录');
+  if (au.role !== 'admin' && !(await checkAIQuota(env, au.id))) return fail(429, 'AI 调用已达上限（每12小时5次），请稍后再试');
   const b = await req.json() as any;
   let url = (b.url || '').trim();
   if (!url) return fail(400, '请填写来源网址');
@@ -315,6 +435,7 @@ async function aiCookingMethodFromURL(req: Request, env: Env) {
   if (!text) return fail(502, '未能提取到内容');
   const nh = b.name?.trim() ? '目标菜品：「' + b.name + '」。\n' : '';
   const r = await callAI(env, [{ role: 'system', content: '你擅长从网页文本提炼食谱步骤。' }, { role: 'user', content: nh + '从以下网页内容提取烹饪方法，分步骤，8步以内，只输出步骤。\n\n' + text }]);
+  await logAIUsage(env, au.id, 'cooking-method-from-url');
   return json({ cookingMethod: r });
 }
 async function callAI(env: Env, msgs: { role: string; content: string }[]) {
@@ -337,6 +458,18 @@ async function handleApi(request: Request, env: Env) {
   const { resource, id, suffix } = r;
 
   try {
+    // Auth routes are public
+    if (resource === 'auth') {
+      if (suffix === 'register' && method === 'POST') return handleRegister(request, env);
+      if (suffix === 'login' && method === 'POST') return handleLogin(request, env);
+      if (suffix === 'me' && method === 'GET') return handleMe(request, env);
+      return fail(404, 'not found');
+    }
+    // All other routes require authentication
+    var __token = getBearer(request);
+    if (!__token) return fail(401, '请先登录');
+    var __payload = await verifyJWT(__token, AUTH_SECRET);
+    if (!__payload) return fail(401, '登录已过期，请重新登录');
     if (resource === 'ingredients') {
       if (!id) { return method === 'GET' ? listIngredients(env) : method === 'POST' ? createIngredient(request, env) : fail(405, ''); }
       if (id && suffix === 'stock' && method === 'PATCH') return setIngredientStock(request, env, id);
@@ -376,9 +509,13 @@ async function handleApi(request: Request, env: Env) {
 }
 
 export async function onRequest(context: any): Promise<Response> {
-  const { request, env } = context;
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
-  const url = new URL(request.url);
-  if (url.pathname.startsWith('/api/')) return handleApi(request, env);
-  return fail(404, 'not found');
+  try {
+    const { request, env } = context;
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders() });
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/')) return await handleApi(request, env);
+    return fail(404, 'not found');
+  } catch (e: any) {
+    return fail(500, e.message || 'Internal Server Error');
+  }
 }
